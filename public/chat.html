@@ -51,7 +51,7 @@
       let ws;
       let me = { id: null, name: 'Guest' };
       let chats = [];
-      let usersMap = new Map();
+  let usersMap = new Map();
       let currentChatId = new URL(location.href).searchParams.get('chatId');
 
       function add(msg) {
@@ -107,6 +107,13 @@
         const data = await res.json();
         const chat = data.chat;
         const otherId = (chat.participants || []).find(p => p !== me.id) || 'unknown';
+        if (otherId && !usersMap.get(otherId)) {
+          try {
+            const ures = await fetch('/api/v1/users/lookup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ ids: [otherId] }) });
+            const out = await ures.json();
+            (out.users || []).forEach(u => usersMap.set(u.id, u));
+          } catch {}
+        }
         const other = usersMap.get(otherId);
         document.getElementById('who').textContent = 'Chat with: ' + (other ? other.name : otherId);
         const el = document.getElementById('messages');
@@ -129,6 +136,7 @@
         if (!ures.ok) { document.getElementById('who').textContent = 'Please log in to chat.'; return; }
         const u = await ures.json();
         me = { id: u.user.id, name: u.user.name || u.user.email };
+        usersMap.set(me.id, { id: me.id, name: me.name, email: u.user.email });
 
         await loadChats();
         updateSendState();
