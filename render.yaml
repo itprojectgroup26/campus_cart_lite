@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: campus-cart-lite
+    env: node
+    buildCommand: corepack enable && pnpm install --prod
+    startCommand: node server.js
+    healthCheckPath: /health
+    autoDeploy: true
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DATA_DIR
+        value: /data
+      - key: SECRET
+        generateValue: true

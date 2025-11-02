@@ -1,0 +1,136 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin - Campus Cart Lite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/nav.js" defer></script>
+  </head>
+  <body>
+    <div id="navbar"></div>
+    <script>
+      // Require auth for admin (and show page even if not admin to expose tools message)
+      (async () => {
+        try {
+          const r = await fetch('/api/v1/user', { credentials: 'same-origin' });
+          if (!r.ok) { location.href = '/login'; }
+        } catch { location.href = '/login'; }
+      })();
+    </script>
+    <main class="max-w-5xl mx-auto p-6">
+      <header class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-blue-600">Admin Dashboard</h1>
+      </header>
+
+      <section id="elevate-card" class="card mb-6 hidden">
+        <div class="flex items-center justify-between">
+          <h2 class="font-semibold">Admin tools</h2>
+          <button id="elevate-btn" class="bg-blue-600 text-white px-3 py-1 rounded">Become Admin (dev)</button>
+        </div>
+        <p class="text-gray-600 mt-2">Local-only helper to make your current user an ADMIN.</p>
+        <p id="elevate-msg" class="text-green-700 mt-2"></p>
+      </section>
+
+      <section class="grid md:grid-cols-2 gap-6">
+        <div class="card">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-semibold">Pending Posts</h3>
+            <button id="refresh-posts" class="bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">Refresh</button>
+          </div>
+          <div id="posts" class="grid gap-3"></div>
+        </div>
+        <div class="card">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-semibold">Pending Requests</h3>
+            <button id="refresh-reqs" class="bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">Refresh</button>
+          </div>
+          <div id="reqs" class="grid gap-3"></div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      async function elevate() {
+  const res = await fetch('/api/v1/admin/elevate', { method: 'POST', credentials: 'same-origin' });
+        const out = await res.json();
+        document.getElementById('elevate-msg').textContent = out.msg || 'Done';
+        // Reload to ensure updated cookie/role is applied consistently
+        setTimeout(() => location.reload(), 300);
+      }
+
+      async function showRole() {
+        try {
+          const res = await fetch('/api/v1/user', { credentials: 'same-origin' });
+          if (!res.ok) return;
+          const data = await res.json();
+          const role = data?.user?.role || 'USER';
+          const info = document.createElement('p');
+          info.className = 'text-sm text-gray-600';
+          info.textContent = `Current role: ${role}`;
+          document.querySelector('header').appendChild(info);
+          // Show elevate only if not admin
+          if (role !== 'ADMIN') {
+            document.getElementById('elevate-card').classList.remove('hidden');
+          }
+        } catch {}
+      }
+
+      async function loadPosts() {
+  const res = await fetch('/api/v1/admin/posts?status=PENDING', { credentials: 'same-origin' });
+        if (!res.ok) {
+          document.getElementById('posts').innerHTML = '<p class="text-red-600">You are not admin.</p>';
+          return;
+        }
+        const data = await res.json();
+        const posts = data.posts || [];
+        const el = document.getElementById('posts');
+        if (!posts.length) { el.innerHTML = '<p class="text-gray-500">No pending posts.</p>'; return; }
+        el.innerHTML = posts.map(p => (
+          `<div class="border rounded p-3"><div class="font-medium">${p.title}</div>
+            <div class="text-sm text-gray-600">${p.category || ''} • R${p.price || ''}</div>
+            <div class="mt-2 flex gap-2">
+              <button data-id="${p.id}" class="approve bg-green-600 text-white px-2 py-1 rounded">Approve</button>
+              <button data-id="${p.id}" class="reject bg-red-600 text-white px-2 py-1 rounded">Reject</button>
+            </div>
+          </div>`
+        )).join('');
+  document.querySelectorAll('.approve').forEach(btn => btn.onclick = async () => { await fetch(`/api/v1/admin/posts/${btn.dataset.id}/approve`, { method: 'POST', credentials: 'same-origin' }); loadPosts(); });
+  document.querySelectorAll('.reject').forEach(btn => btn.onclick = async () => { await fetch(`/api/v1/admin/posts/${btn.dataset.id}/reject`, { method: 'POST', credentials: 'same-origin' }); loadPosts(); });
+      }
+
+      async function loadReqs() {
+  const res = await fetch('/api/v1/admin/requests?status=PENDING', { credentials: 'same-origin' });
+        if (!res.ok) {
+          document.getElementById('reqs').innerHTML = '<p class="text-red-600">You are not admin.</p>';
+          return;
+        }
+        const data = await res.json();
+        const list = data.requests || [];
+        const el = document.getElementById('reqs');
+        if (!list.length) { el.innerHTML = '<p class="text-gray-500">No requests.</p>'; return; }
+        el.innerHTML = list.map(r => (
+          `<div class="border rounded p-3"><div class="font-medium">${r.title}</div>
+            <div class="text-sm text-gray-600">Upvotes: ${r.upvotes || 0}</div>
+            <div class="mt-2 flex gap-2">
+              <button data-id="${r.id}" class="approve-req bg-green-600 text-white px-2 py-1 rounded">Approve</button>
+              <button data-id="${r.id}" class="reject-req bg-red-600 text-white px-2 py-1 rounded">Reject</button>
+              <button data-id="${r.id}" class="delete-req bg-gray-600 text-white px-2 py-1 rounded">Delete</button>
+            </div>
+          </div>`
+        )).join('');
+  document.querySelectorAll('.approve-req').forEach(btn => btn.onclick = async () => { await fetch(`/api/v1/admin/requests/${btn.dataset.id}/approve`, { method: 'POST', credentials: 'same-origin' }); loadReqs(); });
+  document.querySelectorAll('.reject-req').forEach(btn => btn.onclick = async () => { await fetch(`/api/v1/admin/requests/${btn.dataset.id}/reject`, { method: 'POST', credentials: 'same-origin' }); loadReqs(); });
+  document.querySelectorAll('.delete-req').forEach(btn => btn.onclick = async () => { await fetch(`/api/v1/requests/${btn.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' }); loadReqs(); });
+      }
+
+      document.getElementById('elevate-btn').addEventListener('click', elevate);
+      document.getElementById('refresh-posts').addEventListener('click', loadPosts);
+      document.getElementById('refresh-reqs').addEventListener('click', loadReqs);
+  loadPosts();
+  loadReqs();
+  showRole();
+    </script>
+  </body>
+</html>

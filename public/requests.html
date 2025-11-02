@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Requests - Campus Cart Lite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/nav.js" defer></script>
+  </head>
+  <body>
+    <div id="navbar"></div>
+    <script>
+      // Require auth for requests
+      (async () => {
+        try {
+          const r = await fetch('/api/v1/user', { credentials: 'same-origin' });
+          if (!r.ok) { location.href = '/login'; }
+        } catch { location.href = '/login'; }
+      })();
+    </script>
+    <main class="max-w-3xl mx-auto p-6">
+      <header class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-bold text-blue-600">Requests</h1>
+      </header>
+
+      <section class="card mb-6">
+        <h2 class="font-semibold mb-2">Create a request</h2>
+        <form id="req-form" class="grid gap-3">
+          <label class="grid gap-1">Title <input class="border rounded px-3 py-2" type="text" name="title" required /></label>
+          <label class="grid gap-1">Description <textarea class="border rounded px-3 py-2" name="description"></textarea></label>
+          <button class="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2" type="submit">Create</button>
+          <p class="text-red-600" id="req-msg"></p>
+        </form>
+      </section>
+
+      <section>
+        <h2 class="font-semibold mb-2">Latest requests</h2>
+        <div id="requests" class="grid gap-3"></div>
+      </section>
+    </main>
+
+    <script>
+      async function fetchRequests() {
+        const res = await fetch('/api/v1/requests', { credentials: 'same-origin' });
+        if (!res.ok) {
+          document.getElementById('requests').innerHTML = '<p>Please login again.</p>';
+          return;
+        }
+        const data = await res.json();
+        const list = data.requests || [];
+        const el = document.getElementById('requests');
+        el.innerHTML = list.map(r => (
+          `<div class=\"card\"><strong>${r.title}</strong><br />${r.description || ''}<br /><button data-id=\"${r.id}\" class=\"upvote bg-gray-200 px-2 py-1 rounded mt-2\">Upvote (${r.upvotes||0})</button></div>`
+        )).join('');
+        document.querySelectorAll('.upvote').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            await fetch('/api/v1/requests/upvote/' + btn.dataset.id, { method: 'POST', credentials: 'same-origin' });
+            fetchRequests();
+          });
+        });
+      }
+
+      document.getElementById('req-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(e.target).entries());
+        const res = await fetch('/api/v1/requests/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(data)
+        });
+        const out = await res.json();
+        if (res.ok) {
+          e.target.reset();
+          fetchRequests();
+        } else {
+          document.getElementById('req-msg').textContent = out.msg || 'Failed to create request';
+        }
+      });
+
+      // Logout handled via navbar
+
+      fetchRequests();
+    </script>
+  </body>
+</html>

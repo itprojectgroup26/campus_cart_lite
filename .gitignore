@@ -1,0 +1,11 @@
+# Node
+node_modules/
+
+# Local data and env
+data.json
+.env
+
+# OS/Editor
+.DS_Store
+Thumbs.db
+.vscode/

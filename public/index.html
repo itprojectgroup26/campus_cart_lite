@@ -1,0 +1,322 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Campus Cart Lite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/nav.js" defer></script>
+  </head>
+  <body>
+    <div id="navbar"></div>
+    <main class="flex-1">
+      <section class="gradient-animated w-full min-h-[70vh] flex flex-col justify-center items-center px-6 relative overflow-hidden">
+        <canvas id="bg-canvas" class="bg-canvas"></canvas>
+        <div class="noise"></div>
+        <div class="hero-layer max-w-5xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center py-10">
+          <div class="space-y-5">
+            <h1 class="text-5xl md:text-6xl font-extrabold leading-tight">
+              <span class="text-blue-600">Buy & Sell</span> Academic Resources Within Your Campus
+            </h1>
+            <p class="text-lg text-gray-700 max-w-xl">
+              A simple campus marketplace to list textbooks and essentials, chat in real‑time, and keep your budget happy.
+            </p>
+            <div class="flex flex-wrap gap-3">
+              <a href="/signup" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-lg py-3 px-6 rounded shadow">
+                <span>Get started</span>
+              </a>
+              <a id="cta-go" href="/login" class="inline-flex items-center gap-2 bg-white/80 hover:bg-white text-blue-700 text-lg py-3 px-6 rounded shadow">
+                <span>Go to dashboard</span>
+              </a>
+            </div>
+          </div>
+          <div class="hidden md:grid grid-cols-2 gap-4">
+            <div class="glass-card rounded-2xl p-5 flex items-start gap-3">
+              <div class="feature-icon">⚡</div>
+              <div>
+                <div class="font-bold">Quick listings</div>
+                <p class="text-sm text-gray-600">Create a post in under a minute with images.</p>
+              </div>
+            </div>
+            <div class="glass-card rounded-2xl p-5 flex items-start gap-3">
+              <div class="feature-icon">💬</div>
+              <div>
+                <div class="font-bold">Real‑time chat</div>
+                <p class="text-sm text-gray-600">Message securely with campus users only.</p>
+              </div>
+            </div>
+            <div class="glass-card rounded-2xl p-5 flex items-start gap-3">
+              <div class="feature-icon">🔔</div>
+              <div>
+                <div class="font-bold">Smart notifications</div>
+                <p class="text-sm text-gray-600">Stay in the loop on approvals and replies.</p>
+              </div>
+            </div>
+            <div class="glass-card rounded-2xl p-5 flex items-start gap-3">
+              <div class="feature-icon">♻️</div>
+              <div>
+                <div class="font-bold">Sustainable campus</div>
+                <p class="text-sm text-gray-600">Reuse resources and save money together.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="text-center px-6 py-16">
+        <div class="max-w-5xl mx-auto">
+          <div class="space-y-3 mb-10">
+            <h2 class="text-4xl text-blue-600 font-bold">Why choose Campus Cart?</h2>
+            <p class="text-lg text-gray-700 max-w-2xl mx-auto">Your one-stop platform for affordable academic resources, promoting sustainability within your campus community.</p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-left">
+            <div class="glass-card rounded-2xl p-6 hover:shadow-xl transition"><div class="font-bold text-2xl">Save Money</div><p class="mt-2 text-gray-700">Get essentials for less than retail with trusted peers.</p></div>
+            <div class="glass-card rounded-2xl p-6 hover:shadow-xl transition"><div class="font-bold text-2xl">Campus Community</div><p class="mt-2 text-gray-700">Connect directly with students at your college.</p></div>
+            <div class="glass-card rounded-2xl p-6 hover:shadow-xl transition"><div class="font-bold text-2xl">Verified Users</div><p class="mt-2 text-gray-700">Admins keep listings clean and users legit.</p></div>
+            <div class="glass-card rounded-2xl p-6 hover:shadow-xl transition"><div class="font-bold text-2xl">Sustainable</div><p class="mt-2 text-gray-700">Reuse textbooks and gear—good for your wallet and the planet.</p></div>
+            <div class="glass-card rounded-2xl p-6 hover:shadow-xl transition"><div class="font-bold text-2xl">Fast & Simple</div><p class="mt-2 text-gray-700">Post items with images in under a minute.</p></div>
+            <div class="glass-card rounded-2xl p-6 hover:shadow-xl transition"><div class="font-bold text-2xl">All in one</div><p class="mt-2 text-gray-700">Posts, requests, chat, and notifications in one place.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="px-6 py-14 bg-gradient-to-b from-white to-blue-50/40">
+        <div class="max-w-5xl mx-auto">
+          <div class="text-center mb-8">
+            <h3 class="text-2xl font-bold text-blue-700">Live at a glance</h3>
+            <p class="text-gray-600">A quick snapshot of campus activity (sample)</p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="glass-card rounded-2xl p-5">
+              <div class="text-sm text-gray-600">Active listings</div>
+              <div class="text-4xl font-extrabold" id="c1">0</div>
+            </div>
+            <div class="glass-card rounded-2xl p-5">
+              <div class="text-sm text-gray-600">Requests answered</div>
+              <div class="text-4xl font-extrabold" id="c2">0</div>
+            </div>
+            <div class="glass-card rounded-2xl p-5">
+              <div class="text-sm text-gray-600">Messages this week</div>
+              <div class="text-4xl font-extrabold" id="c3">0</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="working" class="bg-blue-50 px-6 py-16">
+        <div class="max-w-5xl mx-auto text-center space-y-3">
+          <h2 class="text-4xl font-bold text-blue-600">How Campus Cart works?</h2>
+          <p class="text-lg text-gray-700 max-w-2xl mx-auto">Get started with these simple steps to buy or sell academic resources on campus.</p>
+        </div>
+        <div class="max-w-5xl mx-auto mt-10">
+          <ol class="relative flex flex-col gap-10 py-10 pl-6 text-sm before:absolute before:top-0 before:left-6 before:h-full before:-translate-x-1/2 before:border before:border-dashed before:border-blue-600">
+            <li class="relative pl-6 before:absolute before:left-0 before:top-2 before:z-10 before:h-5 before:w-5 before:-translate-x-1/2 before:rounded-full before:bg-blue-600 before:ring-2 before:ring-white">
+              <div class="bg-gray-50 rounded p-5 shadow-sm">
+                <div class="text-2xl font-semibold text-blue-700">Create Account</div>
+                <p class="mt-2">Sign up using your college email to join your campus marketplace. Admin Verification ensures a trusted community.</p>
+              </div>
+            </li>
+            <li class="relative pl-6 before:absolute before:left-0 before:top-2 before:z-10 before:h-5 before:w-5 before:-translate-x-1/2 before:rounded-full before:bg-blue-600 before:ring-2 before:ring-white">
+              <div class="bg-gray-50 rounded p-5 shadow-sm">
+                <div class="text-2xl font-semibold text-blue-700">List or Browse</div>
+                <p class="mt-2">List your unused academic materials or browse through available resources in your campus marketplace.</p>
+              </div>
+            </li>
+            <li class="relative pl-6 before:absolute before:left-0 before:top-2 before:z-10 before:h-5 before:w-5 before:-translate-x-1/2 before:rounded-full before:bg-blue-600 before:ring-2 before:ring-white">
+              <div class="bg-gray-50 rounded p-5 shadow-sm">
+                <div class="text-2xl font-semibold text-blue-700">Connect & Chat</div>
+                <p class="mt-2">Use our built-in messaging system to discuss details and arrange meet-ups with fellow students.</p>
+              </div>
+            </li>
+            <li class="relative pl-6 before:absolute before:left-0 before:top-2 before:z-10 before:h-5 before:w-5 before:-translate-x-1/2 before:rounded-full before:bg-blue-600 before:ring-2 before:ring-white">
+              <div class="bg-gray-50 rounded p-5 shadow-sm">
+                <div class="text-2xl font-semibold text-blue-700">Exchange & Review</div>
+                <p class="mt-2">Meet on campus for safe exchanges and leave reviews to build community trust.</p>
+              </div>
+            </li>
+          </ol>
+          <div class="text-center mt-4">
+            <a href="/signup" class="inline-block bg-blue-600 hover:bg-blue-700 text-white text-lg py-3 px-6 rounded">Start selling now</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="faqs" class="px-6 py-16">
+        <div class="max-w-5xl mx-auto">
+          <h2 class="text-3xl md:text-5xl text-blue-600 font-bold text-center">FAQ's</h2>
+          <div class="mt-10 grid gap-4">
+            <details class="bg-blue-50 rounded p-4">
+              <summary class="font-semibold text-lg cursor-pointer">What does Campus Cart offer to students?</summary>
+              <p class="mt-2">Campus Cart provides a dedicated online marketplace where students can buy and sell used college essentials like textbooks, dorm supplies, stationery, and more. This platform helps students save money while promoting the reuse of valuable resources.</p>
+            </details>
+            <details class="bg-blue-50 rounded p-4">
+              <summary class="font-semibold text-lg cursor-pointer">How does Campus Cart promote sustainability?</summary>
+              <p class="mt-2">By encouraging students to buy and sell used items, Campus Cart helps reduce waste and the demand for new products. This promotes a culture of recycling and sustainability, contributing to a greener college experience.</p>
+            </details>
+            <details class="bg-blue-50 rounded p-4">
+              <summary class="font-semibold text-lg cursor-pointer">How can students list their items for sale?</summary>
+              <p class="mt-2">Students can easily list items for sale by creating an account, uploading item details (title, description, price, images), and marking the item’s availability. The platform’s user-friendly interface ensures a smooth listing process.</p>
+            </details>
+            <details class="bg-blue-50 rounded p-4">
+              <summary class="font-semibold text-lg cursor-pointer">Can students make requests for items they need?</summary>
+              <p class="mt-2">Yes, students can post requests for specific items they need. Then other students can upvote to the request showing that this number of students need this item, making it easier for seller to reach out to the student for providing an offer for that item.</p>
+            </details>
+            <details class="bg-blue-50 rounded p-4">
+              <summary class="font-semibold text-lg cursor-pointer">What types of college essentials can students find?</summary>
+              <p class="mt-2">Students can find a wide variety of college essentials, including textbooks, electronics, furniture, stationery, and other necessities for their studies and campus life.</p>
+            </details>
+            <details class="bg-blue-50 rounded p-4">
+              <summary class="font-semibold text-lg cursor-pointer">How does Campus Cart ensure moderation for listings?</summary>
+              <p class="mt-2">Campus Cart employs admin moderation to review and approve listings before they go live. This process ensures that items meet the platform’s guidelines.</p>
+            </details>
+            <details class="bg-blue-50 rounded p-4">
+              <summary class="font-semibold text-lg cursor-pointer">Can admin remove inappropriate listings or content?</summary>
+              <p class="mt-2">Yes, admins have the authority to remove any listings or content that violate Campus Cart’s terms of service. This includes items that are inappropriate, prohibited, or misrepresent their condition.</p>
+            </details>
+            <details class="bg-blue-50 rounded p-4">
+              <summary class="font-semibold text-lg cursor-pointer">Does Campus Cart offer real-time chat for buyers and sellers?</summary>
+              <p class="mt-2">Yes, Campus Cart provides a built-in real-time chat feature that allows buyers and sellers to communicate directly. This enables quick negotiations and inquiries.</p>
+            </details>
+            <details class="bg-blue-50 rounded p-4">
+              <summary class="font-semibold text-lg cursor-pointer">Can users receive notifications for new messages?</summary>
+              <p class="mt-2">Yes, users can receive real-time notifications for new messages through the platform’s messaging system. This ensures they stay updated on inquiries or offers.</p>
+            </details>
+            <details class="bg-blue-50 rounded p-4">
+              <summary class="font-semibold text-lg cursor-pointer">How are delivery details arranged on Campus Cart?</summary>
+              <p class="mt-2">Delivery details are arranged through the real-time chat between the buyer and seller. Both parties can discuss and decide the preferred mode of delivery, whether it's meeting in person, shipping the item, or using other delivery methods.</p>
+            </details>
+            <details class="bg-blue-50 rounded p-4">
+              <summary class="font-semibold text-lg cursor-pointer">Does Campus Cart provide any delivery services?</summary>
+              <p class="mt-2">No, Campus Cart does not offer delivery services. The buyer and seller must discuss and agree on the mode of delivery via the platform’s real-time chat feature, ensuring flexibility based on their preferences.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+  <script>
+    const __simple = new URLSearchParams(location.search).has('simple');
+    // Swap CTA to dashboard if logged in
+    (async () => {
+      try {
+        const r = await fetch('/api/v1/user', { credentials: 'same-origin' });
+        if (r.ok) document.getElementById('cta-go').setAttribute('href','/home');
+      } catch {}
+    })();
+
+    // Simple particles background
+    (function(){
+      if (__simple) { const c=document.getElementById('bg-canvas'); if(c) c.style.display='none'; const n=document.querySelector('.noise'); if(n) n.style.display='none'; return; }
+      const canvas = document.getElementById('bg-canvas');
+      if (!canvas) return;
+      canvas.style.width='100%'; canvas.style.height='100%';
+      const ctx = canvas.getContext('2d');
+      let w, h, dpr;
+      const particles = [];
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const connRangeBase = 90;
+      let lastTime = 0; // FPS cap
+      function resize(){
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const rect = canvas.getBoundingClientRect();
+        w = canvas.width = Math.floor(rect.width * dpr);
+        h = canvas.height = Math.floor(rect.height * dpr);
+      }
+      function spawn(){
+        const rect = canvas.getBoundingClientRect();
+        const isSmall = rect.width < 768;
+        const count = isSmall ? 26 : 44;
+        particles.length = 0;
+        for(let i=0;i<count;i++){
+          particles.push({
+            x: Math.random()*w,
+            y: Math.random()*h,
+            r: 1 + Math.random()*2*dpr,
+            vx: (-0.18+Math.random()*0.36)*dpr,
+            vy: (-0.18+Math.random()*0.36)*dpr,
+            a: 0.15 + Math.random()*0.35,
+          });
+        }
+      }
+      function step(ts){
+        if (ts && ts - lastTime < 33) { requestAnimationFrame(step); return; } // ~30fps
+        lastTime = ts || 0;
+        ctx.clearRect(0,0,w,h);
+        // subtle gradient glow
+        const g = ctx.createLinearGradient(0,0,w,h);
+        g.addColorStop(0,'rgba(37,99,235,0.06)');
+        g.addColorStop(1,'rgba(99,102,241,0.06)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0,0,w,h);
+        // draw links with limited neighbors to reduce O(n^2)
+        ctx.lineWidth = 1;
+        const range = connRangeBase * (Math.min(w,h)/800);
+        for(let i=0;i<particles.length;i++){
+          const p = particles[i];
+          let linked = 0;
+          for(let j=i+1;j<particles.length && linked < 6;j++){
+            const q = particles[j];
+            const dx = p.x-q.x, dy=p.y-q.y; const dist = Math.hypot(dx,dy);
+            if (dist < range){
+              linked++;
+              ctx.strokeStyle = 'rgba(30,64,175,'+(0.12*(1-dist/range))+')';
+              ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.stroke();
+            }
+          }
+        }
+        // draw dots
+        for(const p of particles){
+          ctx.fillStyle = 'rgba(29,78,216,'+p.a+')';
+          ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < -10 || p.x > w+10) p.vx *= -1;
+          if (p.y < -10 || p.y > h+10) p.vy *= -1;
+        }
+        if (!prefersReduced) requestAnimationFrame(step);
+      }
+      let ro;
+      function init(){
+        resize(); spawn();
+        if (ro) ro.disconnect();
+        ro = new ResizeObserver(()=>{ resize(); spawn(); });
+        ro.observe(canvas);
+        requestAnimationFrame(step);
+      }
+      // Defer heavy work until idle or after load
+      if ('requestIdleCallback' in window){
+        requestIdleCallback(init, {timeout: 800});
+      } else {
+        window.addEventListener('load', () => setTimeout(init, 200));
+      }
+      // Ensure animation resumes correctly on back/forward cache restore
+      window.addEventListener('pageshow', (e)=>{ if (e.persisted) init(); });
+      document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) requestAnimationFrame(step); });
+    })();
+
+    // Counter animation for sample metrics
+    (function(){
+      if (__simple) return;
+      const targets = [
+        { el: document.getElementById('c1'), to: 120 },
+        { el: document.getElementById('c2'), to: 48 },
+        { el: document.getElementById('c3'), to: 312 },
+      ];
+      const io = new IntersectionObserver((entries)=>{
+        entries.forEach(e=>{
+          if (e.isIntersecting){
+            targets.forEach(t=>{
+              if (!t.el || t.el.dataset.done) return;
+              t.el.dataset.done = '1';
+              let n=0; const step=Math.ceil(t.to/40);
+              const tick = ()=>{ n+=step; if (n>=t.to){ t.el.textContent=t.to; } else { t.el.textContent=n; requestAnimationFrame(tick); } };
+              requestAnimationFrame(tick);
+            });
+          }
+        })
+      },{threshold:.25});
+      const sample = document.getElementById('c1');
+      if (sample) io.observe(sample.parentElement);
+    })();
+  </script>
+</html>

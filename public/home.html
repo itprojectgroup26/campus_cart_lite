@@ -1,0 +1,258 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Home - Campus Cart Lite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/nav.js" defer></script>
+  </head>
+  <body>
+    <div id="navbar"></div>
+    <script>
+      // Require auth for dashboard
+      (async () => {
+        try {
+          const r = await fetch('/api/v1/user', { credentials: 'same-origin' });
+          if (!r.ok) { location.href = '/login'; }
+        } catch { location.href = '/login'; }
+      })();
+    </script>
+    <main class="max-w-5xl mx-auto p-6">
+      <header class="flex items-center justify-between mb-4">
+        <div>
+          <h1 class="text-3xl font-extrabold text-blue-600">Dashboard</h1>
+          <p class="text-gray-600">Buy, sell, and connect with your campus</p>
+        </div>
+      </header>
+
+      <section id="stats" class="widgets mb-5"></section>
+
+      <section id="section-new" class="mb-4 hidden">
+        <h2 class="font-semibold mb-2">New</h2>
+        <div id="tray-new" class="tray"></div>
+      </section>
+
+      <section id="section-mine" class="mb-5 hidden">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="font-semibold">My posts</h2>
+          <button type="button" id="see-all-mine" class="text-blue-700 text-sm hover:underline">See all</button>
+        </div>
+        <div id="tray-mine" class="tray"></div>
+      </section>
+
+      <section class="card mb-6 float">
+        <h2 class="font-semibold mb-2">Create a post</h2>
+        <form id="post-form" class="grid gap-3">
+          <label class="grid gap-1">Title <input class="border rounded px-3 py-2" type="text" name="title" required /></label>
+          <label class="grid gap-1">Category <input class="border rounded px-3 py-2" type="text" name="category" /></label>
+          <label class="grid gap-1">Price <input class="border rounded px-3 py-2" type="number" step="0.01" name="price" /></label>
+          <label class="grid gap-1">Description <textarea class="border rounded px-3 py-2" name="description"></textarea></label>
+          <label class="grid gap-1">Images
+            <input id="post-images" class="border rounded px-3 py-2" type="file" name="images" accept="image/*" multiple />
+            <span class="text-xs text-gray-500">Up to 4 images. Each under ~1MB recommended.</span>
+          </label>
+          <button class="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2" type="submit">Create</button>
+          <p class="text-red-600" id="post-msg"></p>
+        </form>
+      </section>
+
+      <section class="mb-2">
+        <h2 class="font-semibold mb-2">Latest posts</h2>
+        <div id="posts" class="grid gap-3"></div>
+      </section>
+    </main>
+
+    <script>
+    async function fetchPosts() {
+  const res = await abortableFetch('/api/v1/posts', { credentials: 'same-origin' });
+        if (!res.ok) {
+          document.getElementById('posts').innerHTML = '<p>Please login again.</p>';
+          return;
+        }
+        const data = await res.json();
+        const posts = data.posts || [];
+        const el = document.getElementById('posts');
+        el.innerHTML = posts.map(p => {
+          const img = (p.images && p.images[0]) ? `<img src="${p.images[0]}" alt="${p.title}" class="w-24 h-24 object-cover rounded"/>` : '';
+          return `
+            <div class="card flex gap-3 items-start">
+              ${img}
+              <div class="flex-1 min-w-0">
+                <a href="/post.html?id=${p.id}" class="block font-semibold text-blue-700 hover:underline">${p.title}</a>
+                <div class="text-sm text-gray-600">${p.category || ''} • R${p.price || ''}</div>
+                <p class="text-sm mt-1 line-clamp-2">${p.description || ''}</p>
+                <div class="mt-2 flex gap-2">
+                  <a href="/post.html?id=${p.id}" class="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded" title="View details">View</a>
+                  <button data-user="${p.userId}" class="msg-seller inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded" title="Message seller">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M3 5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25v9A2.25 2.25 0 0118.75 16.5H10.5L6 21v-4.5H5.25A2.25 2.25 0 013 14.25v-9z"/></svg>
+                    <span>Message seller</span>
+                  </button>
+                </div>
+              </div>
+            </div>`;
+        }).join('');
+        document.querySelectorAll('.msg-seller').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const withUserId = btn.getAttribute('data-user');
+            if (!withUserId) return;
+      const res = await abortableFetch('/api/v1/chats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ withUserId }) });
+            const out = await res.json();
+            if (res.ok && out.chatId) {
+              location.href = '/chat.html?chatId=' + out.chatId;
+            }
+          });
+        });
+      }
+      async function fetchTrayNew() {
+        const res = await abortableFetch('/api/v1/posts', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const all = (data.posts || []);
+        const posts = all.slice(0, 10);
+        const el = document.getElementById('tray-new');
+        const sec = document.getElementById('section-new');
+        if (!all.length) {
+          el.innerHTML = '';
+          sec.classList.add('hidden');
+          return;
+        }
+        sec.classList.remove('hidden');
+        el.innerHTML = posts.map(p => {
+          const img = (p.images && p.images[0]) ? `<img src="${p.images[0]}" alt="${p.title}" class="w-32 h-24 object-cover rounded"/>` : '<div class="w-32 h-24 rounded bg-gray-100"></div>';
+          return `<a href="/post.html?id=${p.id}" class="tray-card">
+                    ${img}
+                    <div class="truncate font-medium">${p.title}</div>
+                    <div class="text-xs text-gray-600 truncate">${p.category || ''} • ${p.price ? 'R'+p.price : ''}</div>
+                  </a>`;
+        }).join('');
+      }
+
+      let showAllMine = false;
+      async function fetchTrayMine() {
+        const res = await abortableFetch('/api/v1/posts/mine', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const all = (data.posts || []);
+        const posts = showAllMine ? all : all.slice(0, 10);
+        const el = document.getElementById('tray-mine');
+        const sec = document.getElementById('section-mine');
+        const btn = document.getElementById('see-all-mine');
+        if (!all.length) {
+          el.innerHTML = '';
+          sec.classList.add('hidden');
+          return;
+        }
+        sec.classList.remove('hidden');
+        if (btn) btn.textContent = showAllMine ? 'See less' : 'See all';
+        el.innerHTML = posts.map(p => {
+          const status = p.status || 'APPROVED';
+          const badge = status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : status === 'PENDING' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700';
+          const img = (p.images && p.images[0]) ? `<img src="${p.images[0]}" alt="${p.title}" class="w-32 h-24 object-cover rounded"/>` : '<div class="w-32 h-24 rounded bg-gray-100"></div>';
+          return `<a href="/post.html?id=${p.id}" class="tray-card">
+                    ${img}
+                    <div class="truncate font-medium">${p.title}</div>
+                    <div class="text-xs text-gray-600 truncate">${p.category || ''} • ${p.price ? 'R'+p.price : ''}</div>
+                    <span class="self-start mt-1 px-2 py-0.5 rounded-full text-[10px] ${badge}">${status === 'APPROVED' ? 'Approved' : status === 'PENDING' ? 'Pending' : 'Rejected'}</span>
+                  </a>`;
+        }).join('');
+      }
+
+      function drawSparkline(canvas, series){
+        const dpr = Math.min(window.devicePixelRatio||1,2);
+        const w = canvas.clientWidth, h = canvas.clientHeight;
+        canvas.width = Math.floor(w*dpr); canvas.height = Math.floor(h*dpr);
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        const max = Math.max(...series), min = Math.min(...series);
+        const pad = 6*dpr; const dx = (canvas.width - pad*2) / (series.length-1 || 1);
+        ctx.lineWidth = 2*dpr; ctx.lineJoin='round'; ctx.lineCap='round';
+        const grad = ctx.createLinearGradient(0,0,canvas.width,0);
+        grad.addColorStop(0,'#60a5fa'); grad.addColorStop(1,'#a78bfa');
+        ctx.strokeStyle = grad;
+        ctx.beginPath();
+        series.forEach((v,i)=>{
+          const x = pad + dx*i;
+          const y = pad + (canvas.height - pad*2) * (1 - (v - min)/Math.max(1,(max-min)));
+          if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        });
+        ctx.stroke();
+      }
+
+      async function fetchStats() {
+  const res = await abortableFetch('/api/v1/stats', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const s = await res.json();
+        const items = [
+          { label: 'My Posts', value: s.myPosts, icon: '🗂️' },
+          { label: 'Approved', value: s.approvedPosts, icon: '✅' },
+          { label: 'My Requests', value: s.myRequests, icon: '📥' },
+          { label: 'Unread', value: s.unreadNotifications, icon: '🔔' }
+        ];
+        document.getElementById('stats').innerHTML = items.map((it) => (
+          `<div class="w-card bob">
+             <div class="w-title">${it.label}</div>
+             <div class="w-value">${it.value}</div>
+             <div class="w-icon">${it.icon}</div>
+             <canvas class="spark"></canvas>
+           </div>`
+        )).join('');
+        // draw simple sparklines with synthetic trends based on value
+        document.querySelectorAll('#stats .w-card .spark').forEach((c,i)=>{
+          const base = items[i].value || 0; const len = 20;
+          const series = Array.from({length: len}, (_, k) => {
+            const delta = (Math.sin((k/len)*Math.PI*2) + Math.random()*0.6) * base * 0.15 - base*0.05;
+            return Math.max(0, base + Math.round(delta));
+          });
+          drawSparkline(c, series);
+        });
+      }
+
+      document.getElementById('post-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const data = Object.fromEntries(fd.entries());
+        // images -> base64 array
+        const files = document.getElementById('post-images').files;
+        const images = [];
+        const max = Math.min(files.length, 4);
+        for (let i = 0; i < max; i++) {
+          const file = files[i];
+          const b64 = await new Promise((resolve) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.readAsDataURL(file); });
+          images.push(b64);
+        }
+        data.images = images;
+        data.price = data.price ? Number(data.price) : null;
+        const res = await abortableFetch('/api/v1/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(data)
+        });
+        const out = await res.json();
+        if (res.ok) {
+          e.target.reset();
+          fetchPosts();
+        } else {
+          document.getElementById('post-msg').textContent = out.msg || 'Failed to create post';
+        }
+      });
+
+      // Logout via navbar
+
+  fetchStats();
+  fetchTrayNew();
+  fetchTrayMine();
+  const seeAllBtn = document.getElementById('see-all-mine');
+  if (seeAllBtn) {
+    seeAllBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showAllMine = !showAllMine;
+      fetchTrayMine();
+    });
+  }
+      fetchPosts();
+    </script>
+  </body>
+</html>

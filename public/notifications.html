@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Notifications - Campus Cart Lite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/nav.js" defer></script>
+  </head>
+  <body>
+    <div id="navbar"></div>
+    <main class="max-w-3xl mx-auto p-6">
+      <header class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-bold text-blue-600">Notifications</h1>
+      </header>
+
+      <section class="card">
+        <div class="flex items-center justify-between">
+          <h2 class="font-semibold">Your notifications</h2>
+          <button id="read-all" class="bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 rounded">Mark All Read</button>
+        </div>
+        <div id="list" class="grid gap-3 mt-3"></div>
+      </section>
+    </main>
+
+    <script>
+      async function load() {
+  const res = await fetch('/api/v1/notifications', { credentials: 'same-origin' });
+        if (!res.ok) { document.getElementById('list').innerHTML = '<p>Please login.</p>'; return; }
+        const data = await res.json();
+        const items = data.notifications || [];
+        const el = document.getElementById('list');
+        if (!items.length) { el.innerHTML = '<p class="text-gray-500">No notifications.</p>'; return; }
+        el.innerHTML = items.map(n => (
+          `<div class="border rounded p-3 ${n.read ? 'opacity-60' : ''}">
+            <div>${n.text}</div>
+            <div class="text-sm text-gray-600">${new Date(n.createdAt).toLocaleString()}</div>
+            ${n.read ? '' : `<button data-id="${n.id}" class="read bg-blue-600 text-white px-2 py-1 rounded mt-2">Mark read</button>`}
+          </div>`
+        )).join('');
+  document.querySelectorAll('.read').forEach(btn => btn.onclick = async () => { await fetch(`/api/v1/notifications/${btn.dataset.id}/read`, { method: 'POST', credentials: 'same-origin' }); load(); });
+      }
+
+  document.getElementById('read-all').addEventListener('click', async () => { await fetch('/api/v1/notifications/read-all', { method: 'POST', credentials: 'same-origin' }); load(); });
+  // Logout handled in navbar
+      load();
+    </script>
+  </body>
+</html>

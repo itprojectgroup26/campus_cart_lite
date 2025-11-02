@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chat - Campus Cart Lite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/styles.css" />
+  <script src="/nav.js" defer></script>
+    <style>
+      #messages { height: 60vh; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <div id="navbar"></div>
+    <script>
+      // Require auth for chat
+      (async () => {
+        try {
+          const r = await fetch('/api/v1/user', { credentials: 'same-origin' });
+          if (!r.ok) { location.href = '/login'; }
+        } catch { location.href = '/login'; }
+      })();
+    </script>
+    <main class="max-w-5xl mx-auto p-6">
+      <header class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-bold text-blue-600">Messages</h1>
+      </header>
+
+      <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <aside class="card md:col-span-1">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="font-semibold">Chats</h2>
+            <button id="refresh-chats" class="bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">Refresh</button>
+          </div>
+          <div id="chats" class="grid gap-2"></div>
+        </aside>
+        <section class="card md:col-span-2">
+          <div id="who" class="text-sm text-gray-600 mb-2"></div>
+          <div id="messages" class="border rounded p-3 bg-white"></div>
+          <form id="chat-form" class="mt-3 flex gap-2">
+            <input id="text" type="text" placeholder="Type a message..." class="flex-1 border rounded px-3 py-2" />
+            <button id="send-btn" class="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2" type="submit">Send</button>
+          </form>
+          <p id="chat-hint" class="text-sm text-gray-500 mt-2 hidden">Start a conversation from a listing using the “Message seller” button.</p>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      let ws;
+      let me = { id: null, name: 'Guest' };
+      let chats = [];
+      let usersMap = new Map();
+      let currentChatId = new URL(location.href).searchParams.get('chatId');
+
+      function add(msg) {
+        const el = document.getElementById('messages');
+        const div = document.createElement('div');
+        div.className = 'py-2';
+        const who = msg.senderId === me.id ? 'You' : (usersMap.get(msg.senderId)?.name || msg.senderId);
+        const when = new Date(msg.ts || Date.now()).toLocaleTimeString();
+        div.innerHTML = `<strong>${who}</strong> <span class="text-xs text-gray-500">${when}</span><br/>${msg.text}`;
+        el.appendChild(div);
+        el.scrollTop = el.scrollHeight;
+      }
+
+      function renderChats() {
+        const el = document.getElementById('chats');
+        if (!chats.length) { el.innerHTML = '<p class="text-gray-500">No chats yet.</p>'; return; }
+        el.innerHTML = chats.map(c => {
+          const otherId = c.participants.find(p => p !== me.id) || 'unknown';
+          const other = usersMap.get(otherId);
+          const label = other ? other.name : otherId;
+          const active = c.id === currentChatId ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50';
+          return `<button data-id="${c.id}" class="text-left border rounded px-3 py-2 ${active}">${label}</button>`;
+        }).join('');
+        el.querySelectorAll('button').forEach(btn => btn.onclick = () => {
+          currentChatId = btn.dataset.id;
+          const url = new URL(location.href); url.searchParams.set('chatId', currentChatId); history.replaceState({}, '', url);
+          loadMessages();
+          renderChats();
+        });
+      }
+
+      async function loadChats() {
+        const res = await fetch('/api/v1/chats', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const data = await res.json();
+        chats = data.chats || [];
+        // collect other participant IDs for lookup
+        const ids = Array.from(new Set(chats.flatMap(c => c.participants).filter(id => id !== me.id)));
+        if (ids.length) {
+          const ures = await fetch('/api/v1/users/lookup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ ids }) });
+          const out = await ures.json();
+          (out.users || []).forEach(u => usersMap.set(u.id, u));
+        }
+        if (!currentChatId && chats.length) currentChatId = chats[0].id;
+        renderChats();
+        if (currentChatId) await loadMessages();
+      }
+
+      async function loadMessages() {
+        if (!currentChatId) { document.getElementById('messages').innerHTML = '<p class="text-gray-500">Select a chat to view messages.</p>'; return; }
+        const res = await fetch('/api/v1/chats/' + currentChatId, { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const chat = data.chat;
+        const otherId = (chat.participants || []).find(p => p !== me.id) || 'unknown';
+        const other = usersMap.get(otherId);
+        document.getElementById('who').textContent = 'Chat with: ' + (other ? other.name : otherId);
+        const el = document.getElementById('messages');
+        el.innerHTML = '';
+        (chat.messages || []).forEach(add);
+      }
+
+      function updateSendState() {
+        const btn = document.getElementById('send-btn');
+        const hint = document.getElementById('chat-hint');
+        const disabled = !currentChatId;
+        btn.disabled = disabled;
+        btn.classList.toggle('opacity-50', disabled);
+        hint.classList.toggle('hidden', !disabled);
+      }
+
+      async function boot() {
+        // Who am I
+        const ures = await fetch('/api/v1/user', { credentials: 'same-origin' });
+        if (!ures.ok) { document.getElementById('who').textContent = 'Please log in to chat.'; return; }
+        const u = await ures.json();
+        me = { id: u.user.id, name: u.user.name || u.user.email };
+
+        await loadChats();
+        updateSendState();
+
+        // Connect WS
+        ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+        ws.onopen = () => {
+          ws.send(JSON.stringify({ type: 'hello', uid: me.id, name: me.name }));
+        };
+        ws.onmessage = (e) => {
+          try {
+            const msg = JSON.parse(e.data);
+            if (msg.type === 'chat' && msg.chatId === currentChatId) add(msg);
+          } catch {}
+        };
+      }
+
+      document.getElementById('chat-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const input = document.getElementById('text');
+        const text = input.value.trim();
+        if (!text || !currentChatId) { updateSendState(); return; }
+        if (ws && ws.readyState === WebSocket.OPEN && currentChatId) {
+          ws.send(JSON.stringify({ type: 'chat', chatId: currentChatId, text }));
+          input.value = '';
+          return;
+        }
+        // Fallback to HTTP
+        if (currentChatId) {
+          await fetch('/api/v1/chats/' + currentChatId + '/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ text }) });
+          input.value = '';
+          loadMessages();
+        }
+      });
+
+      document.getElementById('refresh-chats').addEventListener('click', loadChats);
+      boot();
+    </script>
+  </body>
+</html>

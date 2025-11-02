@@ -1,0 +1,113 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Post - Campus Cart Lite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/styles.css" />
+  <script src="/nav.js" defer></script>
+  </head>
+  <body>
+    <div id="navbar"></div>
+    <script>
+      // Require auth for post view
+      (async () => {
+        try {
+          const r = await fetch('/api/v1/user', { credentials: 'same-origin' });
+          if (!r.ok) { location.href = '/login'; }
+        } catch { location.href = '/login'; }
+      })();
+    </script>
+    <main class="max-w-3xl mx-auto p-6">
+      <header class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-bold text-blue-600">Post</h1>
+      </header>
+
+      <section id="view" class="card mb-6"></section>
+
+      <section id="edit" class="card hidden">
+        <h2 class="font-semibold mb-2">Edit post</h2>
+        <form id="edit-form" class="grid gap-3">
+          <label class="grid gap-1">Title <input class="border rounded px-3 py-2" type="text" name="title" /></label>
+          <label class="grid gap-1">Category <input class="border rounded px-3 py-2" type="text" name="category" /></label>
+          <label class="grid gap-1">Price <input class="border rounded px-3 py-2" type="number" step="0.01" name="price" /></label>
+          <label class="grid gap-1">Description <textarea class="border rounded px-3 py-2" name="description"></textarea></label>
+          <div class="flex gap-2">
+            <button class="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2" type="submit">Save</button>
+            <button id="mark-sold" class="bg-gray-700 hover:bg-gray-800 text-white rounded px-4 py-2" type="button">Mark as Sold</button>
+          </div>
+          <p class="text-red-600" id="edit-msg"></p>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      function qs(name) { const u = new URL(location.href); return u.searchParams.get(name); }
+      const id = qs('id');
+
+      async function load() {
+  const res = await fetch(`/api/v1/posts/${id}`, { credentials: 'same-origin' });
+        if (!res.ok) { document.getElementById('view').innerHTML = '<p class="text-red-600">Not found or forbidden.</p>'; return; }
+        const { post } = await res.json();
+          const status = post.status || 'APPROVED';
+          const statusBadge = status === 'APPROVED' ? `<span class=\"px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700\">Approved</span>`
+                             : status === 'PENDING' ? `<span class=\"px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700\">Pending approval</span>`
+                             : `<span class=\"px-2 py-0.5 rounded-full text-xs bg-rose-100 text-rose-700\">Rejected</span>`;
+          const soldBadge = post.sold ? `<span class=\"px-2 py-0.5 rounded-full text-xs bg-gray-800 text-white\">Sold</span>` : '';
+          document.getElementById('view').innerHTML = `
+            <div class=\"flex items-start justify-between gap-4\">
+              <div class=\"min-w-0\">
+                <div class=\"text-xl font-semibold\">${post.title}</div>
+                <div class=\"flex items-center gap-2 mt-1\">${statusBadge}${soldBadge}</div>
+                <div class=\"text-sm text-gray-600 mt-1\">${post.category || ''} • ${post.price ? 'R'+post.price : ''}</div>
+                <p class=\"mt-2\">${post.description || ''}</p>
+                ${Array.isArray(post.images) && post.images.length ? `<div class=\"mt-3 grid grid-cols-3 gap-2\">${post.images.map(src => `<img src=\"${src}\" alt=\"${post.title}\" class=\"w-full h-24 object-cover rounded\"/>`).join('')}</div>` : ''}
+                <div class=\"mt-3\">
+                  <button id=\"msg-seller\" class=\"inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-1.5\" title=\"Message seller\">
+                    <svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"currentColor\" class=\"w-5 h-5\"><path d=\"M3 5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25v9A2.25 2.25 0 0118.75 16.5H10.5L6 21v-4.5H5.25A2.25 2.25 0 013 14.25v-9z\"/></svg>
+                    <span>Message seller</span>
+                  </button>
+                </div>
+              </div>
+              <button id=\"edit-toggle\" class=\"bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded\">Edit</button>
+            </div>`;
+        const msgBtn = document.getElementById('msg-seller');
+        if (msgBtn && post.userId) {
+          msgBtn.onclick = async () => {
+            const res = await fetch('/api/v1/chats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ withUserId: post.userId }) });
+            const out = await res.json();
+            if (res.ok && out.chatId) {
+              location.href = '/chat.html?chatId=' + out.chatId;
+            }
+          };
+        }
+        document.getElementById('edit-toggle').onclick = () => {
+          document.getElementById('edit').classList.remove('hidden');
+          // Populate form
+          const f = document.getElementById('edit-form');
+          f.title.value = post.title || '';
+          f.category.value = post.category || '';
+          f.price.value = post.price || '';
+          f.description.value = post.description || '';
+        };
+      }
+
+      document.getElementById('edit-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const body = Object.fromEntries(new FormData(e.target).entries());
+        if (body.price) body.price = Number(body.price);
+  const res = await fetch(`/api/v1/posts/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(body) });
+        if (res.ok) { await load(); document.getElementById('edit').classList.add('hidden'); }
+        else { const out = await res.json(); document.getElementById('edit-msg').textContent = out.msg || 'Update failed'; }
+      });
+
+      document.getElementById('mark-sold').addEventListener('click', async () => {
+  const res = await fetch(`/api/v1/posts/${id}/mark-sold`, { method: 'POST', credentials: 'same-origin' });
+        if (res.ok) { await load(); document.getElementById('edit').classList.add('hidden'); }
+      });
+
+      load();
+    </script>
+  </body>
+</html>
