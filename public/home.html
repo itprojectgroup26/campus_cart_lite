@@ -11,6 +11,23 @@
   <body>
     <div id="navbar"></div>
     <script>
+    // Ensure abortableFetch exists even if nav.js hasn't executed yet
+    (function(){
+      if (typeof window.abortableFetch !== 'function') {
+        const controllers = new Set();
+        window.abortableFetch = function(input, init = {}){
+          const c = new AbortController();
+          controllers.add(c);
+          const merged = { ...init, signal: c.signal };
+          if (!merged.credentials) merged.credentials = 'same-origin';
+          return fetch(input, merged).finally(() => controllers.delete(c));
+        };
+        const abortAll = () => { controllers.forEach(c=>{ try{ c.abort(); } catch{} }); controllers.clear(); };
+        window.addEventListener('beforeunload', abortAll);
+        window.addEventListener('pagehide', abortAll);
+        document.addEventListener('visibilitychange', ()=>{ if (document.hidden) abortAll(); });
+      }
+    })();
       // Require auth for dashboard
       (async () => {
         try {
@@ -239,7 +256,7 @@
         }
       });
 
-      // Logout via navbar
+  // Logout via navbar
 
   fetchStats();
   fetchTrayNew();

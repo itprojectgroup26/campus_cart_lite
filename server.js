@@ -28,9 +28,9 @@ const adapter = new JSONFile(path.join(DATA_DIR, 'data.json'));
 const db = new Low(adapter, { users: [], posts: [], requests: [], notifications: [], chats: [], messages: [] });
 
 // Helpers
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 function uid() { return randomUUID(); }
@@ -432,6 +432,20 @@ app.post('/api/v1/users/lookup', authMiddleware, (req, res) => {
 });
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+// Sys info to help verify persistence on hosts
+app.get('/api/v1/sys/info', (req, res) => {
+  try {
+    const dataFile = path.join(DATA_DIR, 'data.json');
+    const exists = fs.existsSync(dataFile);
+    const size = exists ? (fs.statSync(dataFile).size) : 0;
+    const users = (db.data?.users || []).length;
+    const posts = (db.data?.posts || []).length;
+    res.json({ dataDir: DATA_DIR, dataFile, exists, size, counts: { users, posts } });
+  } catch (e) {
+    res.json({ dataDir: DATA_DIR, error: String(e) });
+  }
+});
 
 // Stats for dashboard widgets
 app.get('/api/v1/stats', authMiddleware, (req, res) => {
