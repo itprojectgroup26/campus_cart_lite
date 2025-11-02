@@ -42,7 +42,7 @@
         <div id="tray-mine" class="tray"></div>
       </section>
 
-      <section class="card mb-6 float">
+      <section class="card mb-6">
         <h2 class="font-semibold mb-2">Create a post</h2>
         <form id="post-form" class="grid gap-3">
           <label class="grid gap-1">Title <input class="border rounded px-3 py-2" type="text" name="title" required /></label>
@@ -191,7 +191,7 @@
           { label: 'Unread', value: s.unreadNotifications, icon: '🔔' }
         ];
         document.getElementById('stats').innerHTML = items.map((it) => (
-          `<div class="w-card bob">
+          `<div class="w-card">
              <div class="w-title">${it.label}</div>
              <div class="w-value">${it.value}</div>
              <div class="w-icon">${it.icon}</div>

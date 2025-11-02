@@ -1,20 +1,19 @@
+// Abortable fetch helpers available ASAP (before DOMContentLoaded)
+const __cc_controllers = new Set();
+function __cc_abortAllFetches(){ __cc_controllers.forEach(c => { try { c.abort(); } catch {} }); __cc_controllers.clear(); }
+window.abortableFetch = function(input, init = {}){
+  const c = new AbortController();
+  __cc_controllers.add(c);
+  const merged = { ...init, signal: c.signal };
+  if (!merged.credentials) merged.credentials = 'same-origin';
+  return fetch(input, merged).finally(() => __cc_controllers.delete(c));
+}
+window.addEventListener('beforeunload', __cc_abortAllFetches);
+window.addEventListener('pagehide', __cc_abortAllFetches);
+document.addEventListener('visibilitychange', ()=>{ if (document.hidden) __cc_abortAllFetches(); });
+
 document.addEventListener('DOMContentLoaded', async () => {
   const root = document.getElementById('navbar') || (() => { const d=document.createElement('div'); d.id='navbar'; document.body.prepend(d); return d; })();
-
-  // Abortable fetch helpers to keep the UI snappy on fast navigation
-  const controllers = new Set();
-  function abortAllFetches(){ controllers.forEach(c => { try { c.abort(); } catch {} }); controllers.clear(); }
-  window.abortableFetch = function(input, init = {}){
-    const c = new AbortController();
-    controllers.add(c);
-    const merged = { ...init, signal: c.signal };
-    // default to same-origin credentials for app requests
-    if (!merged.credentials) merged.credentials = 'same-origin';
-    return fetch(input, merged).finally(() => controllers.delete(c));
-  }
-  window.addEventListener('beforeunload', abortAllFetches);
-  window.addEventListener('pagehide', abortAllFetches);
-  document.addEventListener('visibilitychange', ()=>{ if (document.hidden) abortAllFetches(); });
 
   async function getUser() {
     try {
