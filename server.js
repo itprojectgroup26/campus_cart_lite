@@ -133,10 +133,16 @@ app.post('/api/v1/auth/signup', async (req, res) => {
 
   const hash = await bcrypt.hash(password, 10);
   const id = uid();
-  db.data.users.push({ id, email, name, password: hash, college, phoneNo, image: image ?? null, role: 'USER', createdAt: new Date().toISOString() });
+  const user = { id, email, name, password: hash, college, phoneNo, image: image ?? null, role: 'USER', createdAt: new Date().toISOString() };
+  db.data.users.push(user);
+  // If no admins exist yet, promote the first registrant to ADMIN
+  const hasAdmin = (db.data.users || []).some(u => u.role === 'ADMIN');
+  if (!hasAdmin) {
+    user.role = 'ADMIN';
+  }
   await db.write();
 
-  const token = jwt.sign({ id, email, role: 'USER' }, SECRET);
+  const token = jwt.sign({ id, email, role: user.role }, SECRET);
   const cookieOpts = { httpOnly: true, sameSite: 'lax', path: '/' };
   res.cookie('session', token, cookieOpts);
   res.cookie('uid', id, { ...cookieOpts, httpOnly: false });
