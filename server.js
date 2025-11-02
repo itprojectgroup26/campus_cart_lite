@@ -18,6 +18,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 8080;
 const SECRET = process.env.SECRET || 'devsecret-lite';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || '';
+const ADMIN_CODE = process.env.ADMIN_CODE || SECRET; // fallback to SECRET if no explicit code
 
 // DB init (JSON file; allow overriding directory for writable/persistent volumes in hosting)
 const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname;
@@ -287,16 +289,38 @@ app.get('/api/v1/posts/mine', authMiddleware, (req, res) => {
   });
 
 // Admin endpoints
+// Elevate a user to admin in a controlled way
+// Options:
+// - Provide { code: ADMIN_CODE, userId?: string } to elevate any user (secure bootstrap)
+// - If caller is already ADMIN, they can elevate others without code by passing { userId }
 app.post('/api/v1/admin/elevate', authMiddleware, async (req, res) => {
-  const u = db.data.users.find(x => x.id === req.user.id);
-  if (!u) return res.status(404).json({ msg: 'User not found' });
-  u.role = 'ADMIN';
+  const { code, userId } = req.body || {};
+  const caller = db.data.users.find(x => x.id === req.user.id);
+  if (!caller) return res.status(404).json({ msg: 'User not found' });
+
+  const hasCode = typeof code === 'string' && code && code === ADMIN_CODE;
+  const isAdmin = caller.role === 'ADMIN';
+  if (!hasCode && !isAdmin) return res.status(403).json({ msg: 'Forbidden' });
+
+  const targetId = userId || caller.id;
+  const target = db.data.users.find(x => x.id === targetId);
+  if (!target) return res.status(404).json({ msg: 'Target user not found' });
+  target.role = 'ADMIN';
   await db.write();
-  // Update token cookie with new role
-  const token = jwt.sign({ id: u.id, email: u.email, role: u.role }, SECRET);
-  const cookieOpts = { httpOnly: true, sameSite: 'lax', path: '/' };
-  res.cookie('session', token, cookieOpts);
-  res.json({ msg: 'Elevated to admin' });
+
+  // If caller elevated self, refresh their cookie to reflect new role
+  if (target.id === caller.id) {
+    const token = jwt.sign({ id: caller.id, email: caller.email, role: 'ADMIN' }, SECRET);
+    const cookieOpts = { httpOnly: true, sameSite: 'lax', path: '/' };
+    res.cookie('session', token, cookieOpts);
+  }
+  res.json({ msg: `Elevated ${target.email} to admin` });
+});
+
+// List users (admin only, no passwords)
+app.get('/api/v1/admin/users', authMiddleware, adminMiddleware, (req, res) => {
+  const users = (db.data.users || []).map(u => ({ id: u.id, email: u.email, name: u.name, role: u.role, createdAt: u.createdAt }));
+  res.json({ users });
 });
 
 app.get('/api/v1/admin/posts', authMiddleware, adminMiddleware, (req, res) => {
@@ -435,6 +459,32 @@ async function bootstrap() {
     if (!('upvotes' in r)) r.upvotes = 0;
     if (!('voters' in r)) r.voters = [];
   });
+  // Ensure users have roles
+  (db.data.users || []).forEach(u => {
+    if (!('role' in u)) u.role = 'USER';
+  });
+
+  // Guarantee at least one admin exists for moderation
+  try {
+    const admins = (db.data.users || []).filter(u => u.role === 'ADMIN');
+    if (admins.length === 0 && (db.data.users || []).length > 0) {
+      let promote = null;
+      if (ADMIN_EMAIL) {
+        promote = db.data.users.find(u => (u.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase());
+      }
+      if (!promote) {
+        // Oldest by createdAt
+        promote = [...db.data.users].sort((a,b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))[0];
+      }
+      if (promote) {
+        promote.role = 'ADMIN';
+        await db.write();
+        console.log(`Bootstrap: Promoted ${promote.email} to ADMIN`);
+      }
+    }
+  } catch (e) {
+    console.warn('Bootstrap admin check failed:', e?.message || e);
+  }
   const server = http.createServer(app);
 
   // WebSocket Chat Server
