@@ -88,10 +88,7 @@ const SignupSchema = z.object({
 const LoginSchema = z.object({
   email: z
     .string()
-    .email({ message: "Please provide a valid @my.richfield.ac.za or @gmail.com email" })
-    .regex(emailPattern, {
-      message: "Email must be a valid @my.richfield.ac.za or @gmail.com address",
-    }),
+    .email({ message: "Please provide a valid email" }),
   password: z.string(),
 });
 
@@ -128,12 +125,13 @@ app.post('/api/v1/auth/signup', async (req, res) => {
   }
 
   const { email, name, password, college, phoneNo, image } = result.data;
-  const exists = db.data.users.find(u => u.email === email);
+  const emailNorm = String(email).trim().toLowerCase();
+  const exists = db.data.users.find(u => String(u.email || '').trim().toLowerCase() === emailNorm);
   if (exists) return res.status(400).json({ msg: 'Account already exists. Please login!' });
 
   const hash = await bcrypt.hash(password, 10);
   const id = uid();
-  const user = { id, email, name, password: hash, college, phoneNo, image: image ?? null, role: 'USER', createdAt: new Date().toISOString() };
+  const user = { id, email: emailNorm, name, password: hash, college, phoneNo, image: image ?? null, role: 'USER', createdAt: new Date().toISOString() };
   db.data.users.push(user);
   // If no admins exist yet, promote the first registrant to ADMIN
   const hasAdmin = (db.data.users || []).some(u => u.role === 'ADMIN');
@@ -142,7 +140,7 @@ app.post('/api/v1/auth/signup', async (req, res) => {
   }
   await db.write();
 
-  const token = jwt.sign({ id, email, role: user.role }, SECRET);
+  const token = jwt.sign({ id, email: user.email, role: user.role }, SECRET);
   const cookieOpts = { httpOnly: true, sameSite: 'lax', path: '/' };
   res.cookie('session', token, cookieOpts);
   res.cookie('uid', id, { ...cookieOpts, httpOnly: false });
@@ -166,7 +164,8 @@ app.post('/api/v1/auth/login', async (req, res) => {
   }
 
   const { email, password } = result.data;
-  const user = db.data.users.find(u => u.email === email);
+  const emailNorm = String(email).trim().toLowerCase();
+  const user = db.data.users.find(u => String(u.email || '').trim().toLowerCase() === emailNorm);
   if (!user) return res.status(400).json({ msg: 'Please create an account!' });
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) return res.status(400).json({ msg: 'Incorrect credentials!' });
@@ -478,6 +477,12 @@ async function bootstrap() {
     if (!('status' in r)) r.status = 'APPROVED';
     if (!('upvotes' in r)) r.upvotes = 0;
     if (!('voters' in r)) r.voters = [];
+  });
+  // Normalize user emails to lowercase (login is case-insensitive)
+  (db.data.users || []).forEach(u => {
+    if (u && typeof u.email === 'string') {
+      u.email = u.email.trim().toLowerCase();
+    }
   });
   // Ensure users have roles
   (db.data.users || []).forEach(u => {
