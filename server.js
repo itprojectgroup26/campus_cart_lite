@@ -8,6 +8,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
+import { MongoAdapter } from './mongo-adapter.js';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { WebSocketServer } from 'ws';
@@ -21,10 +22,17 @@ const SECRET = process.env.SECRET || 'devsecret-lite';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || '';
 const ADMIN_CODE = process.env.ADMIN_CODE || SECRET; // fallback to SECRET if no explicit code
 
-// DB init (JSON file; allow overriding directory for writable/persistent volumes in hosting)
+// DB init (JSON file by default; can use MongoDB when MONGODB_URI is provided)
 const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname;
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch {}
-const adapter = new JSONFile(path.join(DATA_DIR, 'data.json'));
+const MONGODB_URI = process.env.MONGODB_URI || '';
+let adapter;
+if (MONGODB_URI) {
+  adapter = new MongoAdapter(MONGODB_URI, process.env.MONGODB_DB || 'campus_cart', process.env.MONGODB_COLLECTION || 'lite_db');
+  console.log('Using MongoDB adapter for persistence');
+} else {
+  adapter = new JSONFile(path.join(DATA_DIR, 'data.json'));
+}
 const db = new Low(adapter, { users: [], posts: [], requests: [], notifications: [], chats: [], messages: [] });
 
 // Helpers
@@ -54,16 +62,13 @@ function adminMiddleware(req, res, next) {
 }
 
 // Zod schemas (mirroring original)
-const emailPattern = /^[^\s@]+@(my\.richfield\.ac\.za|gmail\.com)$/i;
+// Allow any valid email domain (previously restricted to specific domains)
 const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,10}$/;
 
 const SignupSchema = z.object({
   email: z
     .string()
-    .email({ message: "Please provide a valid @my.richfield.ac.za or @gmail.com email" })
-    .regex(emailPattern, {
-      message: "Email must be a valid @my.richfield.ac.za or @gmail.com address",
-    }),
+    .email({ message: "Please provide a valid email address" }),
   name: z.string().min(5, { message: "Name must be minimum 5 characters long" }),
   password: z
     .string()
@@ -290,6 +295,14 @@ app.get('/api/v1/posts/mine', authMiddleware, (req, res) => {
     res.json({ msg: 'Deleted' });
   });
 
+// My requests (all statuses)
+app.get('/api/v1/requests/mine', authMiddleware, (req, res) => {
+  const mine = [...(db.data.requests || [])]
+    .filter(r => r.userId === req.user.id)
+    .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  res.json({ requests: mine });
+});
+
 // Admin endpoints
 // Elevate a user to admin in a controlled way
 // Options:
@@ -437,9 +450,11 @@ app.get('/api/v1/sys/info', (req, res) => {
     const size = exists ? (fs.statSync(dataFile).size) : 0;
     const users = (db.data?.users || []).length;
     const posts = (db.data?.posts || []).length;
-    res.json({ dataDir: DATA_DIR, dataFile, exists, size, counts: { users, posts } });
+    const storage = MONGODB_URI ? 'mongo' : 'json';
+    res.json({ dataDir: DATA_DIR, storage, dataFile, exists, size, counts: { users, posts } });
   } catch (e) {
-    res.json({ dataDir: DATA_DIR, error: String(e) });
+    const storage = MONGODB_URI ? 'mongo' : 'json';
+    res.json({ dataDir: DATA_DIR, storage, error: String(e) });
   }
 });
 

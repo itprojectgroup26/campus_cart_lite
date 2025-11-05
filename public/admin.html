@@ -78,9 +78,9 @@
       }
 
       async function loadPosts() {
-  const res = await fetch('/api/v1/admin/posts?status=PENDING', { credentials: 'same-origin' });
+        const res = await fetch('/api/v1/admin/posts?status=PENDING', { credentials: 'same-origin' });
         if (!res.ok) {
-          document.getElementById('posts').innerHTML = '<p class="text-red-600">You are not admin.</p>';
+          document.getElementById('posts').innerHTML = '<p class="text-red-600">You are not admin. Use <a class="underline" href="/admin-setup.html">Admin setup</a> to elevate your account with the setup code.</p>';
           return;
         }
         const data = await res.json();
@@ -93,11 +93,18 @@
             <div class="mt-2 flex gap-2">
               <button data-id="${p.id}" class="approve bg-green-600 text-white px-2 py-1 rounded">Approve</button>
               <button data-id="${p.id}" class="reject bg-red-600 text-white px-2 py-1 rounded">Reject</button>
+              ${p.userId ? `<button data-user="${p.userId}" class="msg bg-blue-600 text-white px-2 py-1 rounded">Message owner</button>` : ''}
             </div>
           </div>`
         )).join('');
   document.querySelectorAll('.approve').forEach(btn => btn.onclick = async () => { await fetch(`/api/v1/admin/posts/${btn.dataset.id}/approve`, { method: 'POST', credentials: 'same-origin' }); loadPosts(); });
   document.querySelectorAll('.reject').forEach(btn => btn.onclick = async () => { await fetch(`/api/v1/admin/posts/${btn.dataset.id}/reject`, { method: 'POST', credentials: 'same-origin' }); loadPosts(); });
+  document.querySelectorAll('.msg').forEach(btn => btn.onclick = async () => {
+    const withUserId = btn.dataset.user;
+    const res = await fetch('/api/v1/chats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ withUserId }) });
+    const out = await res.json().catch(()=>({}));
+    if (res.ok && out.chatId) location.href = '/chat.html?chatId=' + out.chatId;
+  });
       }
 
       async function loadReqs() {

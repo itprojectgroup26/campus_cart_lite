@@ -15,3 +15,11 @@ services:
         value: /data
       - key: SECRET
         generateValue: true
+      - key: ADMIN_CODE
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: campus_cart
+      - key: MONGODB_COLLECTION
+        value: lite_db

@@ -10,8 +10,8 @@
   </head>
   <body>
     <div id="navbar"></div>
-    <script>
-    // Ensure abortableFetch exists even if nav.js hasn't executed yet
+  <script>
+  // Ensure abortableFetch exists even if nav.js hasn't executed yet
     (function(){
       if (typeof window.abortableFetch !== 'function') {
         const controllers = new Set();
@@ -29,10 +29,13 @@
       }
     })();
       // Require auth for dashboard
+      let __me = null;
       (async () => {
         try {
           const r = await fetch('/api/v1/user', { credentials: 'same-origin' });
-          if (!r.ok) { location.href = '/login'; }
+          if (!r.ok) { location.href = '/login'; return; }
+          const u = await r.json();
+          __me = u.user || null;
         } catch { location.href = '/login'; }
       })();
     </script>
@@ -71,13 +74,28 @@
             <span class="text-xs text-gray-500">Up to 4 images. Each under ~1MB recommended.</span>
           </label>
           <button class="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2" type="submit">Create</button>
-          <p class="text-red-600" id="post-msg"></p>
+          <p class="text-sm" id="post-msg"></p>
+        </form>
+      </section>
+
+      <section class="card mb-6">
+        <h2 class="font-semibold mb-2">Create a request</h2>
+        <form id="req-form" class="grid gap-3">
+          <label class="grid gap-1">Title <input class="border rounded px-3 py-2" type="text" name="title" required /></label>
+          <label class="grid gap-1">Description <textarea class="border rounded px-3 py-2" name="description"></textarea></label>
+          <button class="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2" type="submit">Create</button>
+          <p class="text-sm" id="req-msg"></p>
         </form>
       </section>
 
       <section class="mb-2">
         <h2 class="font-semibold mb-2">Latest posts</h2>
         <div id="posts" class="grid gap-3 grid-cols-1 sm:grid-cols-2"></div>
+      </section>
+
+      <section class="mb-2">
+        <h2 class="font-semibold mb-2">Latest requests</h2>
+        <div id="requests" class="grid gap-3 grid-cols-1 sm:grid-cols-2"></div>
       </section>
     </main>
 
@@ -114,10 +132,17 @@
           btn.addEventListener('click', async () => {
             const withUserId = btn.getAttribute('data-user');
             if (!withUserId) return;
-      const res = await abortableFetch('/api/v1/chats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ withUserId }) });
-            const out = await res.json();
+            if (__me && withUserId === __me.id) {
+              alert('You cannot message yourself.');
+              return;
+            }
+            const res = await abortableFetch('/api/v1/chats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ withUserId }) });
+            let out = {};
+            try { out = await res.json(); } catch {}
             if (res.ok && out.chatId) {
               location.href = '/chat.html?chatId=' + out.chatId;
+            } else {
+              alert(out.msg || 'Unable to start chat. Please login and try again.');
             }
           });
         });
@@ -173,6 +198,54 @@
                     <div class="text-xs text-gray-600 truncate">${p.category || ''} • ${p.price ? 'R'+p.price : ''}</div>
                     <span class="self-start mt-1 px-2 py-0.5 rounded-full text-[10px] ${badge}">${status === 'APPROVED' ? 'Approved' : status === 'PENDING' ? 'Pending' : 'Rejected'}</span>
                   </a>`;
+        }).join('');
+      }
+
+      async function fetchRequestsDash() {
+        const res = await abortableFetch('/api/v1/requests', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const list = data.requests || [];
+        const el = document.getElementById('requests');
+        el.innerHTML = list.slice(0, 10).map(r => (
+          `<div class="card">
+             <div class="font-medium truncate">${r.title}</div>
+             <p class="text-sm text-gray-600 line-clamp-2">${r.description || ''}</p>
+             <div class="text-xs text-gray-500 mt-1">Upvotes: ${r.upvotes || 0}</div>
+           </div>`
+        )).join('');
+      }
+
+      async function fetchMyRequests() {
+        const res = await abortableFetch('/api/v1/requests/mine', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const all = data.requests || [];
+        if (!all.length) return; // keep dashboard lean if none
+        // Insert a compact tray below stats if not present
+        let holder = document.getElementById('tray-myreqs');
+        if (!holder) {
+          const sec = document.createElement('section');
+          sec.id = 'section-myreqs';
+          sec.className = 'mb-5';
+          sec.innerHTML = `
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="font-semibold">My requests</h2>
+              <a href="/requests.html" class="text-blue-700 text-sm hover:underline">Manage</a>
+            </div>
+            <div id="tray-myreqs" class="tray"></div>`;
+          document.querySelector('main').insertBefore(sec, document.getElementById('section-new'));
+          holder = sec.querySelector('#tray-myreqs');
+        }
+        const items = all.slice(0, 10);
+        holder.innerHTML = items.map(r => {
+          const status = r.status || 'APPROVED';
+          const badge = status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : status === 'PENDING' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700';
+          return `<div class="tray-card">
+                    <div class="truncate font-medium">${r.title}</div>
+                    <div class="text-xs text-gray-600 truncate">Upvotes: ${r.upvotes || 0}</div>
+                    <span class="self-start mt-1 px-2 py-0.5 rounded-full text-[10px] ${badge}">${status === 'APPROVED' ? 'Approved' : status === 'PENDING' ? 'Pending' : 'Rejected'}</span>
+                  </div>`;
         }).join('');
       }
 
@@ -248,11 +321,40 @@
           body: JSON.stringify(data)
         });
         const out = await res.json();
+        const msgEl = document.getElementById('post-msg');
         if (res.ok) {
           e.target.reset();
+          msgEl.classList.remove('text-red-600');
+          msgEl.classList.add('text-emerald-700');
+          msgEl.textContent = 'Post created. It is pending admin approval and will appear once approved. See the "My posts" section for status.';
+          fetchTrayMine();
           fetchPosts();
         } else {
-          document.getElementById('post-msg').textContent = out.msg || 'Failed to create post';
+          msgEl.classList.remove('text-emerald-700');
+          msgEl.classList.add('text-red-600');
+          msgEl.textContent = (out && (out.msg || out.error)) || 'Failed to create post';
+        }
+      });
+
+      // Create Request handler
+      document.getElementById('req-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const data = Object.fromEntries(fd.entries());
+        const res = await abortableFetch('/api/v1/requests/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(data) });
+        const out = await res.json().catch(() => ({}));
+        const msgEl = document.getElementById('req-msg');
+        if (res.ok) {
+          e.target.reset();
+          msgEl.classList.remove('text-red-600');
+          msgEl.classList.add('text-emerald-700');
+          msgEl.textContent = 'Request created. It is pending admin approval and will appear once approved. See "My requests" for status.';
+          fetchMyRequests();
+          fetchRequestsDash();
+        } else {
+          msgEl.classList.remove('text-emerald-700');
+          msgEl.classList.add('text-red-600');
+          msgEl.textContent = (out && (out.msg || out.error)) || 'Failed to create request';
         }
       });
 
@@ -261,6 +363,8 @@
   fetchStats();
   fetchTrayNew();
   fetchTrayMine();
+  fetchRequestsDash();
+  fetchMyRequests();
   const seeAllBtn = document.getElementById('see-all-mine');
   if (seeAllBtn) {
     seeAllBtn.addEventListener('click', (e) => {

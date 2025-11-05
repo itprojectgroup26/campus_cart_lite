@@ -87,10 +87,18 @@
         const msgBtn = document.getElementById('msg-seller');
         if (msgBtn && post.userId) {
           msgBtn.onclick = async () => {
+            try {
+              const meRes = await fetch('/api/v1/user', { credentials: 'same-origin' });
+              if (!meRes.ok) { location.href = '/login'; return; }
+              const me = await meRes.json();
+              if (me?.user?.id === post.userId) { alert('You cannot message yourself.'); return; }
+            } catch {}
             const res = await fetch('/api/v1/chats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ withUserId: post.userId }) });
-            const out = await res.json();
+            const out = await res.json().catch(()=>({}));
             if (res.ok && out.chatId) {
               location.href = '/chat.html?chatId=' + out.chatId;
+            } else {
+              alert(out.msg || 'Unable to start chat. Please make sure you are logged in.');
             }
           };
         }
