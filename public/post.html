@@ -19,7 +19,7 @@
         } catch { location.href = '/login'; }
       })();
     </script>
-    <main class="max-w-3xl mx-auto p-6">
+  <main class="max-w-3xl mx-auto p-6 pb-20">
       <header class="flex items-center justify-between mb-4">
         <h1 class="text-2xl font-bold text-blue-600">Post</h1>
       </header>
@@ -74,7 +74,7 @@
                 <div class=\"flex items-center gap-2 mt-1\">${statusBadge}${soldBadge}</div>
                 <div class=\"text-sm text-gray-600 mt-1\">${post.category || ''} • ${post.price ? 'R'+post.price : ''}</div>
                 <p class=\"mt-2\">${post.description || ''}</p>
-                ${Array.isArray(post.images) && post.images.length ? `<div id=\"img-grid\" class=\"mt-3 grid grid-cols-3 gap-2\">${post.images.map((src,i) => `<img data-idx=\"${i}\" src=\"${src}\" alt=\"${post.title}\" class=\"w-full h-24 object-cover rounded cursor-zoom-in\"/>`).join('')}</div>` : ''}
+                ${Array.isArray(post.images) && post.images.length ? `<div id=\"img-grid\" class=\"mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2\">${post.images.map((src,i) => `<img data-idx=\"${i}\" src=\"${src}\" alt=\"${post.title}\" class=\"w-full h-24 object-cover rounded cursor-zoom-in\"/>`).join('')}</div>` : ''}
                 <div class=\"mt-3\">
                   <button id=\"msg-seller\" class=\"inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-1.5\" title=\"Message seller\">
                     <svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"currentColor\" class=\"w-5 h-5\"><path d=\"M3 5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25v9A2.25 2.25 0 0118.75 16.5H10.5L6 21v-4.5H5.25A2.25 2.25 0 013 14.25v-9z\"/></svg>

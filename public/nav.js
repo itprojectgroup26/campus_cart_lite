@@ -96,4 +96,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       location.href = '/login';
     });
   }
+
+  // Render a compact bottom nav on small screens for easier mobile use
+  const unreadDot = unread > 0 ? '<span class="badge-dot"></span>' : '';
+  const here = location.pathname;
+  const item = (href, iconSvg, label) => {
+    const active = here === href ? 'active' : '';
+    return `<a href="${href}" class="item ${active}">${iconSvg}<span class="text-[10px] mt-0.5">${label}</span></a>`;
+  };
+  const container = document.createElement('div');
+  container.className = 'md:hidden bottom-nav safe-bottom';
+  container.innerHTML = `
+    <div class="grid grid-cols-4 text-sm relative">
+      ${user ? item('/home', ic.home, 'Home') : item('/', ic.landing, 'Home')}
+      ${user ? item('/requests.html', ic.requests, 'Requests') : item('/login', ic.home, 'Login')}
+      ${user ? item('/chat.html', ic.chat, 'Chat') : item('/signup', ic.requests, 'Sign up')}
+      <div class="relative">${user ? item('/notifications.html', ic.bell, 'Alerts') : `<span></span>`}${unreadDot}</div>
+    </div>`;
+  document.body.appendChild(container);
 });

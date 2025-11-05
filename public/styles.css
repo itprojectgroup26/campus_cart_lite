@@ -10,6 +10,10 @@
 }
 body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;padding:0;background:var(--bg);color:var(--text)}
 html,body{min-height:100%;overflow-y:auto}
+.safe-bottom{padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 72px)}
+@media (max-width: 767px){
+	body{padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 68px)}
+}
 .container{max-width:720px;margin:40px auto;padding:0 16px}
 form{display:grid;gap:12px}
 label{font-weight:600}
@@ -50,6 +54,8 @@ nav a{margin-right:10px}
 .tray::-webkit-scrollbar-thumb{background:#e5e7eb;border-radius:999px}
 .tray-card{display:flex;flex-direction:column;min-width:180px;max-width:220px;border:1px solid var(--border);border-radius:14px;padding:10px;background:var(--card);box-shadow:0 1px 1px rgba(0,0,0,0.02),0 4px 12px rgba(0,0,0,0.06);transition:transform .15s ease,box-shadow .15s ease}
 .tray-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,0.08)}
+.tray{scroll-snap-type:x mandatory}
+.tray-card{scroll-snap-align:start}
 
 /* Animated gradient background */
 .gradient-animated{background:linear-gradient(120deg,#e0f2fe,#ede9fe,#dbeafe,#fef3c7);background-size:200% 200%;animation:moveGradient 12s ease infinite}
@@ -79,3 +85,9 @@ nav a{margin-right:10px}
 @media (prefers-reduced-motion: reduce){
 	.bg-canvas{display:none}
 }
+
+/* Mobile bottom nav */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:60;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border-top:1px solid var(--border)}
+.bottom-nav .item{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 6px;color:#374151}
+.bottom-nav .item.active{color:var(--brand-700)}
+.badge-dot{position:absolute;top:6px;right:22px;width:8px;height:8px;background:#ef4444;border-radius:999px}
