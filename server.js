@@ -609,7 +609,7 @@ async function bootstrap() {
   });
 
   server.listen(PORT, () => {
-    console.log(`Lite server listening on http://localhost:${PORT}`);
+    console.log(`Lite server listening on port ${PORT} (DATA_DIR=${DATA_DIR})`);
   });
 }
 
