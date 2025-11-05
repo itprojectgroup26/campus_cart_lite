@@ -133,15 +133,11 @@ app.post('/api/v1/auth/signup', async (req, res) => {
   const id = uid();
   const user = { id, email: emailNorm, name, password: hash, college, phoneNo, image: image ?? null, role: 'USER', createdAt: new Date().toISOString() };
   db.data.users.push(user);
-  // If no admins exist yet, promote the first registrant to ADMIN
-  const hasAdmin = (db.data.users || []).some(u => u.role === 'ADMIN');
-  if (!hasAdmin) {
-    user.role = 'ADMIN';
-  }
   await db.write();
 
   const token = jwt.sign({ id, email: user.email, role: user.role }, SECRET);
-  const cookieOpts = { httpOnly: true, sameSite: 'lax', path: '/' };
+  const remember = !!req.body?.remember;
+  const cookieOpts = { httpOnly: true, sameSite: 'lax', path: '/', ...(remember ? { maxAge: 30*24*60*60*1000 } : {}) };
   res.cookie('session', token, cookieOpts);
   res.cookie('uid', id, { ...cookieOpts, httpOnly: false });
   return res.status(201).json({ msg: 'Account created!', token, uid: id });
@@ -170,7 +166,8 @@ app.post('/api/v1/auth/login', async (req, res) => {
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) return res.status(400).json({ msg: 'Incorrect credentials!' });
   const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, SECRET);
-  const cookieOpts = { httpOnly: true, sameSite: 'lax', path: '/' };
+  const remember = !!req.body?.remember;
+  const cookieOpts = { httpOnly: true, sameSite: 'lax', path: '/', ...(remember ? { maxAge: 30*24*60*60*1000 } : {}) };
   res.cookie('session', token, cookieOpts);
   res.cookie('uid', user.id, { ...cookieOpts, httpOnly: false });
   return res.status(200).json({ msg: 'Credentials verified!', token, uid: user.id });
@@ -446,6 +443,17 @@ app.get('/api/v1/sys/info', (req, res) => {
   }
 });
 
+// Admin state (public, read-only): whether any admin exists
+app.get('/api/v1/admin/state', (req, res) => {
+  try {
+    const hasAdmin = (db.data?.users || []).some(u => u.role === 'ADMIN');
+    const me = req.cookies?.session ? (()=>{ try { return jwt.verify(req.cookies.session, SECRET); } catch { return null; } })() : null;
+    res.json({ hasAdmin, myRole: me?.role || 'ANON' });
+  } catch {
+    res.json({ hasAdmin: false, myRole: 'ANON' });
+  }
+});
+
 // Stats for dashboard widgets
 app.get('/api/v1/stats', authMiddleware, (req, res) => {
   const me = req.user.id;
@@ -489,22 +497,15 @@ async function bootstrap() {
     if (!('role' in u)) u.role = 'USER';
   });
 
-  // Guarantee at least one admin exists for moderation
+  // Optional bootstrap: if ADMIN_EMAIL is configured and no admins exist, promote that account only
   try {
     const admins = (db.data.users || []).filter(u => u.role === 'ADMIN');
-    if (admins.length === 0 && (db.data.users || []).length > 0) {
-      let promote = null;
-      if (ADMIN_EMAIL) {
-        promote = db.data.users.find(u => (u.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase());
-      }
-      if (!promote) {
-        // Oldest by createdAt
-        promote = [...db.data.users].sort((a,b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))[0];
-      }
+    if (admins.length === 0 && ADMIN_EMAIL) {
+      const promote = db.data.users.find(u => (u.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase());
       if (promote) {
         promote.role = 'ADMIN';
         await db.write();
-        console.log(`Bootstrap: Promoted ${promote.email} to ADMIN`);
+        console.log(`Bootstrap: Promoted ${promote.email} to ADMIN via ADMIN_EMAIL`);
       }
     }
   } catch (e) {

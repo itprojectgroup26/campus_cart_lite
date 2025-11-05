@@ -65,6 +65,13 @@
         el.scrollTop = el.scrollHeight;
       }
 
+      function initials(name){
+        const parts = String(name||'').trim().split(/\s+/);
+        const a = (parts[0]||'').charAt(0).toUpperCase();
+        const b = (parts[1]||'').charAt(0).toUpperCase();
+        return (a+b)||a||'?';
+      }
+
       function renderChats() {
         const el = document.getElementById('chats');
         if (!chats.length) { el.innerHTML = '<p class="text-gray-500">No chats yet.</p>'; return; }
@@ -72,8 +79,9 @@
           const otherId = c.participants.find(p => p !== me.id) || 'unknown';
           const other = usersMap.get(otherId);
           const label = other ? other.name : otherId;
+          const avatar = `<span class=\"inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold mr-2\">${initials(label)}</span>`;
           const active = c.id === currentChatId ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50';
-          return `<button data-id="${c.id}" class="text-left border rounded px-3 py-2 ${active}">${label}</button>`;
+          return `<button data-id="${c.id}" class="text-left border rounded px-3 py-2 flex items-center ${active}">${avatar}<span class=\"truncate\">${label}</span></button>`;
         }).join('');
         el.querySelectorAll('button').forEach(btn => btn.onclick = () => {
           currentChatId = btn.dataset.id;

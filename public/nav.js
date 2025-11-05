@@ -35,6 +35,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const user = await getUser();
   const unread = user ? await getUnread() : 0;
+  // Detect if an admin exists to optionally show setup link
+  let hasAdmin = true;
+  try {
+    const s = await abortableFetch('/api/v1/admin/state');
+    if (s.ok) { const d = await s.json(); hasAdmin = !!d.hasAdmin; }
+  } catch {}
 
   const icon = (paths) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 transition-transform group-hover:scale-110">${paths}</svg>`;
 
@@ -66,7 +72,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     right += link('/requests.html', 'Requests', ic.requests);
     right += link('/chat.html', 'Chat', ic.chat);
     right += link('/notifications.html', 'Notifications', ic.bell, badge);
-    if (user.role === 'ADMIN') right += link('/admin.html', 'Admin', ic.admin);
+  if (user.role === 'ADMIN') right += link('/admin.html', 'Admin', ic.admin);
+  else if (!hasAdmin) right += link('/admin-setup.html', 'Admin setup', ic.admin);
     right += `<button id="nav-logout" class="inline-flex items-center gap-2 text-gray-700 hover:text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition" title="Logout">${ic.logout}<span class="hidden sm:inline">Logout</span></button>`;
   } else {
     right += link('/', 'Home', ic.landing);

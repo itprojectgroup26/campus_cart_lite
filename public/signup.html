@@ -51,6 +51,8 @@
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const data = Object.fromEntries(new FormData(form).entries());
+        // Persist email for convenience on login
+        try { localStorage.setItem('lastEmail', String(data.email||'')); } catch {}
         const res = await fetch('/api/v1/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

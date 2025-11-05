@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin Setup - Campus Cart Lite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/nav.js" defer></script>
+  </head>
+  <body>
+    <div id="navbar"></div>
+    <main class="max-w-md mx-auto p-6">
+      <header class="mb-4 text-center">
+        <h1 class="text-2xl font-bold text-blue-600">Admin Setup</h1>
+        <p class="text-gray-600">Elevate your account using the setup code</p>
+      </header>
+      <section id="state" class="card mb-4"></section>
+      <section class="card">
+        <form id="form" class="grid gap-3">
+          <label class="grid gap-1">Setup code
+            <input class="border rounded px-3 py-2" type="password" name="code" placeholder="Enter admin code" required />
+          </label>
+          <button class="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2" type="submit">Elevate me</button>
+          <p id="msg" class="text-sm text-red-600 min-h-[1.25rem]"></p>
+        </form>
+      </section>
+    </main>
+    <script>
+      async function loadState(){
+        const res = await fetch('/api/v1/admin/state', { credentials: 'same-origin' });
+        const out = await res.json();
+        const el = document.getElementById('state');
+        el.innerHTML = `<div><strong>Status:</strong> ${out.hasAdmin ? 'An admin exists' : 'No admin yet'}</div>`;
+        if (out.myRole === 'ADMIN') {
+          document.getElementById('form').classList.add('hidden');
+          document.getElementById('msg').textContent = 'You are already an admin.';
+        }
+      }
+      document.getElementById('form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const code = fd.get('code');
+        const res = await fetch('/api/v1/admin/elevate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ code }) });
+        const out = await res.json();
+        if (res.ok) {
+          document.getElementById('msg').classList.remove('text-red-600');
+          document.getElementById('msg').classList.add('text-emerald-700');
+          document.getElementById('msg').textContent = 'Success! You are now an admin.';
+          setTimeout(()=>{ location.href = '/admin.html'; }, 800);
+        } else {
+          document.getElementById('msg').classList.remove('text-emerald-700');
+          document.getElementById('msg').classList.add('text-red-600');
+          document.getElementById('msg').textContent = out.msg || 'Invalid code';
+        }
+      });
+      loadState();
+    </script>
+  </body>
+</html>
